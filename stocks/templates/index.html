@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,9 +7,12 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Stock Manager</h1>
-
+    <nav class="navbar bg-body-tertiary">
+        <div class="container-fluid">
+          <span class="navbar-brand mb-0 h1">Stock Manager</span>
+        </div>
+    </nav>
+    <div class="container mt-2">
         <!-- Form to Add a New Stock -->
         <form id="addStockForm" class="form-inline row">
             <div class="form-group col-md-3 mb-2">
@@ -30,10 +32,11 @@
         <hr>
 
         <!-- List of Stocks -->
-        <h2>Stock List</h2>
+        <!-- <h4>Stock List</h4> -->
         <table class="table table-light table-hover">
             <thead>
                 <tr>
+                    <th>SR No</th>
                     <th>Name</th>
                     <th>Ticker</th>
                     <th>Price</th>
@@ -109,6 +112,13 @@
         </div>
     </div>
     </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Stock list pagination">
+        <ul class="pagination justify-content-center" id="pagination">
+            <!-- Pagination items will be inserted dynamically here -->
+        </ul>
+    </nav>
   
     <!-- Add Bootstrap JS and jQuery -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
@@ -116,18 +126,39 @@
 
     <!-- JavaScript for interacting with the API -->
     <script>
+        // Define the base API URL and pagination settings
         const apiUrl = '/stocks/';
+        let currentPage = 1;  // Current page number for pagination
+        const rowsPerPage = 5;  // Number of rows (stocks) per page
 
-        // Fetch the list of stocks and display them
-        function fetchStocks() {
+        // Fetch the list of stocks from the backend and display them with pagination
+        function fetchStocks(page = 1) {
+            currentPage = page;  // Update the current page
+
+            // Fetch stock data from the API
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
                     const stockList = document.getElementById('stockList');
+                    const pagination = document.getElementById('pagination');
+                    
+                    // Clear existing stock list and pagination
                     stockList.innerHTML = '';
-                    data.forEach(stock => {
+                    pagination.innerHTML = '';
+
+                    // Calculate the start and end index for pagination
+                    const startIndex = (page - 1) * rowsPerPage;
+                    const endIndex = Math.min(startIndex + rowsPerPage, data.length);
+
+                    // Loop through the stocks for the current page and display them
+                    for (let i = startIndex; i < endIndex; i++) {
+                        const stock = data[i];
+                        const srNo = i + 1;  // Serial number
+
+                        // Append each stock as a table row
                         stockList.innerHTML += `
                             <tr>
+                                <td>${srNo}</td>
                                 <td>${stock.name}</td>
                                 <td>${stock.ticker_symbol}</td>
                                 <td>${stock.price}</td>
@@ -137,25 +168,40 @@
                                 </td>
                             </tr>
                         `;
-                    });
+                    }
+
+                    // Calculate total pages for pagination
+                    const totalPages = Math.ceil(data.length / rowsPerPage);
+
+                    // Generate pagination buttons
+                    for (let i = 1; i <= totalPages; i++) {
+                        pagination.innerHTML += `
+                            <li class="page-item ${i === page ? 'active' : ''}">
+                                <a class="page-link" href="javascript:void(0)" onclick="fetchStocks(${i})">${i}</a>
+                            </li>
+                        `;
+                    }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => console.error('Error:', error));  // Log any errors to the console
         }
 
-        // Add a new stock
+        // Handle the form submission for adding a new stock
         document.getElementById('addStockForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+            e.preventDefault();  // Prevent the form from refreshing the page
 
+            // Get stock details from form fields
             const name = document.getElementById('name').value;
             const tickerSymbol = document.getElementById('ticker_symbol').value;
             const price = document.getElementById('price').value;
 
+            // Create a new stock object to be sent to the API
             const newStock = {
                 name: name,
                 ticker_symbol: tickerSymbol,
                 price: price
             };
 
+            // Send a POST request to add the new stock to the database
             fetch(apiUrl, {
                 method: 'POST',
                 headers: {
@@ -165,32 +211,32 @@
             })
             .then(response => response.json())
             .then(() => {
-                // Clear the form
+                // Clear the form and refresh the stock list
                 document.getElementById('addStockForm').reset();
-                // Fetch updated list of stocks
                 fetchStocks();
             })
             .catch(error => console.error('Error:', error));
         });
-        
-        // Update a stock
+
+        // Open the update modal and populate it with stock data for updating
         function openUpdateModal(id, name, tickerSymbol, price) {
-            // Set the form fields with the stock data
+            // Set form fields with current stock data
             document.getElementById('updateName').value = name;
             document.getElementById('updateTickerSymbol').value = tickerSymbol;
             document.getElementById('updatePrice').value = price;
 
-            // Handle form submission with JavaScript to send a PUT request
+            // Handle the form submission to update the stock
             document.getElementById('updateStockForm').onsubmit = function (e) {
-                e.preventDefault();
+                e.preventDefault();  // Prevent form submission from refreshing the page
 
+                // Create an updated stock object
                 const updatedStock = {
                     name: document.getElementById('updateName').value,
                     ticker_symbol: document.getElementById('updateTickerSymbol').value,
                     price: document.getElementById('updatePrice').value
                 };
 
-                // Send the PUT request using fetch
+                // Send a PUT request to update the stock in the database
                 fetch(`${apiUrl}${id}/`, {
                     method: 'PUT',
                     headers: {
@@ -200,38 +246,32 @@
                 })
                 .then(response => response.json())
                 .then(() => {
-                    // Close the modal
+                    // Close the modal and refresh the stock list
                     $('#updateStockModal').modal('hide');
-                    // Fetch the updated stock list
                     fetchStocks();
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => console.error('Error:', error));  // Log any errors to the console
             };
 
-            // Open the modal
+            // Show the update modal
             $('#updateStockModal').modal('show');
         }
 
-
-        // Delete a stock
+        // Delete a stock by ID
         function deleteStock(stockId) {
+            // Send a DELETE request to remove the stock from the database
             fetch(`${apiUrl}${stockId}/`, {
                 method: 'DELETE',
             })
             .then(() => {
                 fetchStocks();  // Refresh the stock list after deletion
             })
-            .catch(error => console.error('Error:', error));
-        }
-
-        // Function to update a stock (this will open a new form or modal)
-        function updateStock(stockId) {
-            // Implement update functionality (can open a modal or use inline editing)
-            alert('Update functionality is not implemented yet!');
+            .catch(error => console.error('Error:', error));  // Log any errors to the console
         }
 
         // Fetch and display the list of stocks when the page loads
         fetchStocks();
+
     </script>
 </body>
 </html>
