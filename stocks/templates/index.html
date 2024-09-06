@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Manager</title>
+    <!-- Add Bootstrap for basic styling -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Stock Manager</h1>
+
+        <!-- Form to Add a New Stock -->
+        <form id="addStockForm" class="form-inline row">
+            <div class="form-group col-md-3 mb-2">
+                <input type="text" id="name" class="form-control w-100" placeholder="Stock Name" required>
+            </div>
+            <div class="form-group col-md-3 mb-2">
+                <input type="text" id="ticker_symbol" class="form-control w-100" placeholder="Ticker Symbol" required>
+            </div>
+            <div class="form-group col-md-3 mb-2">
+                <input type="number" id="price" class="form-control w-100" placeholder="Stock Price" required>
+            </div>
+            <div class="mb-2 text-right">
+                <button type="submit" class="btn btn-primary">Add Stock</button>
+            </div>
+        </form>
+        
+        <hr>
+
+        <!-- List of Stocks -->
+        <h2>Stock List</h2>
+        <table class="table table-light table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Ticker</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="stockList">
+                <!-- Stock rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+        <!-- Update Stock Modal -->
+    <div class="modal fade" id="updateStockModal" tabindex="-1" role="dialog" aria-labelledby="updateStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="updateStockModalLabel">Update Stock</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="updateStockForm" method="POST" action="">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="updateName">Stock Name</label>
+                    <input type="text" id="updateName" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="updateTickerSymbol">Ticker Symbol</label>
+                    <input type="text" id="updateTickerSymbol" name="ticker_symbol" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="updatePrice">Stock Price</label>
+                    <input type="number" id="updatePrice" name="price" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Stock</button>
+            </form>
+        </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Update Stock Modal -->
+    <div class="modal fade" id="updateStockModal" tabindex="-1" role="dialog" aria-labelledby="updateStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="updateStockModalLabel">Update Stock</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="updateStockForm" method="POST" action="">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="updateName">Stock Name</label>
+                    <input type="text" id="updateName" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="updateTickerSymbol">Ticker Symbol</label>
+                    <input type="text" id="updateTickerSymbol" name="ticker_symbol" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="updatePrice">Stock Price</label>
+                    <input type="number" id="updatePrice" name="price" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Stock</button>
+            </form>
+        </div>
+        </div>
+    </div>
+    </div>
+  
+    <!-- Add Bootstrap JS and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <!-- JavaScript for interacting with the API -->
+    <script>
+        const apiUrl = '/stocks/';
+
+        // Fetch the list of stocks and display them
+        function fetchStocks() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const stockList = document.getElementById('stockList');
+                    stockList.innerHTML = '';
+                    data.forEach(stock => {
+                        stockList.innerHTML += `
+                            <tr>
+                                <td>${stock.name}</td>
+                                <td>${stock.ticker_symbol}</td>
+                                <td>${stock.price}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="openUpdateModal(${stock.id}, '${stock.name.replace(/'/g, "\\'")}', '${stock.ticker_symbol.replace(/'/g, "\\'")}', ${stock.price})">Update</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteStock(${stock.id})">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Add a new stock
+        document.getElementById('addStockForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const tickerSymbol = document.getElementById('ticker_symbol').value;
+            const price = document.getElementById('price').value;
+
+            const newStock = {
+                name: name,
+                ticker_symbol: tickerSymbol,
+                price: price
+            };
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newStock),
+            })
+            .then(response => response.json())
+            .then(() => {
+                // Clear the form
+                document.getElementById('addStockForm').reset();
+                // Fetch updated list of stocks
+                fetchStocks();
+            })
+            .catch(error => console.error('Error:', error));
+        });
+        
+        // Update a stock
+        function openUpdateModal(id, name, tickerSymbol, price) {
+            // Set the form fields with the stock data
+            document.getElementById('updateName').value = name;
+            document.getElementById('updateTickerSymbol').value = tickerSymbol;
+            document.getElementById('updatePrice').value = price;
+
+            // Handle form submission with JavaScript to send a PUT request
+            document.getElementById('updateStockForm').onsubmit = function (e) {
+                e.preventDefault();
+
+                const updatedStock = {
+                    name: document.getElementById('updateName').value,
+                    ticker_symbol: document.getElementById('updateTickerSymbol').value,
+                    price: document.getElementById('updatePrice').value
+                };
+
+                // Send the PUT request using fetch
+                fetch(`${apiUrl}${id}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updatedStock),
+                })
+                .then(response => response.json())
+                .then(() => {
+                    // Close the modal
+                    $('#updateStockModal').modal('hide');
+                    // Fetch the updated stock list
+                    fetchStocks();
+                })
+                .catch(error => console.error('Error:', error));
+            };
+
+            // Open the modal
+            $('#updateStockModal').modal('show');
+        }
+
+
+        // Delete a stock
+        function deleteStock(stockId) {
+            fetch(`${apiUrl}${stockId}/`, {
+                method: 'DELETE',
+            })
+            .then(() => {
+                fetchStocks();  // Refresh the stock list after deletion
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Function to update a stock (this will open a new form or modal)
+        function updateStock(stockId) {
+            // Implement update functionality (can open a modal or use inline editing)
+            alert('Update functionality is not implemented yet!');
+        }
+
+        // Fetch and display the list of stocks when the page loads
+        fetchStocks();
+    </script>
+</body>
+</html>
